@@ -15,7 +15,6 @@ interface DeportivaSectionProps {
 export function DeportivaSection({ articles }: DeportivaSectionProps) {
   const { football, tennis, basketball, isLoading, hasFetched, fetchAllSports } = useSportsStore();
 
-  // Fetch all sports data on mount
   useEffect(() => {
     fetchAllSports();
   }, [fetchAllSports]);
@@ -24,43 +23,63 @@ export function DeportivaSection({ articles }: DeportivaSectionProps) {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchAllSports();
-    }, 60000); // 60 seconds
-
+    }, 60000);
     return () => clearInterval(interval);
   }, [fetchAllSports]);
 
-  // Combine all matches for the score strip
   const allMatches = [...football, ...tennis, ...basketball];
-
-  // Show loading skeleton while loading and no data has been fetched yet
   const showLoadingSkeleton = isLoading && !hasFetched && allMatches.length === 0;
+
+  // Separate by status for display
+  const liveMatches = allMatches.filter((m) => m.status === "live");
+  const finishedMatches = allMatches.filter((m) => m.status === "finished");
+  const upcomingMatches = allMatches.filter((m) => m.status === "upcoming");
+  const displayMatches = [...liveMatches, ...finishedMatches, ...upcomingMatches].slice(0, 10);
 
   return (
     <section className="bg-spng-bg-secondary py-10">
       <div className="max-w-7xl mx-auto px-4">
         <SectionHeader title="Deportiva" href="/deportiva" accentColor="#059669" />
 
-        {/* Score cards horizontal scroll */}
+        {/* Score strip — dark themed */}
         <div className="mb-8 -mx-4 px-4">
-          {showLoadingSkeleton ? (
-            <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="min-w-[280px] h-24 bg-gray-200 rounded-lg animate-pulse"
-                />
-              ))}
+          <div className="bg-neutral-950 rounded-xl p-4 shadow-lg">
+            {/* Strip header */}
+            <div className="flex items-center justify-between mb-3 px-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white">Marcadores</span>
+                {liveMatches.length > 0 && (
+                  <span className="text-[10px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                    {liveMatches.length} en vivo
+                  </span>
+                )}
+              </div>
+              <a
+                href="/deportiva"
+                className="text-[11px] font-medium text-neutral-400 hover:text-spng-accent transition-colors"
+              >
+                Ver todos
+              </a>
             </div>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2">
-              {allMatches
-                .filter((m) => m.status === "live" || m.status === "finished")
-                .slice(0, 8)
-                .map((match) => (
+
+            {/* Cards scroll */}
+            {showLoadingSkeleton ? (
+              <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="min-w-55 h-25 bg-neutral-800 rounded-lg animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+                {displayMatches.map((match) => (
                   <SportScoreCard key={match.id} match={match} />
                 ))}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs for sports + news */}

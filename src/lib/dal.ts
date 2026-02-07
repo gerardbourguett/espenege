@@ -153,6 +153,30 @@ export async function getAllArticles(): Promise<Article[]> {
   return articles;
 }
 
+export async function searchArticles(query: string): Promise<Article[]> {
+  if (useSanity) {
+    const client = await getSanityClient();
+    const queries = await getSanityQueries();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const docs = await client.fetch(queries.searchArticlesQuery, { q: `*${query}*` } as any);
+    return toArticles(docs);
+  }
+  const { searchArticles } = await getMockData();
+  return searchArticles(query);
+}
+
+export async function getArticlesByTag(tag: string): Promise<Article[]> {
+  if (useSanity) {
+    const client = await getSanityClient();
+    const queries = await getSanityQueries();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const docs = await client.fetch(queries.articlesByTagQuery, { tag } as any);
+    return toArticles(docs);
+  }
+  const { getArticlesByTag } = await getMockData();
+  return getArticlesByTag(tag);
+}
+
 export async function getAllArticleSlugs(): Promise<{ slug: string }[]> {
   if (useSanity) {
     const client = await getSanityClient();
