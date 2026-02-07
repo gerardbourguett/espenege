@@ -6,6 +6,7 @@ interface SportsStore {
   tennis: Match[];
   basketball: Match[];
   isLoading: boolean;
+  hasFetched: boolean;
   error: string | null;
   fetchMatches: (sport: SportType) => Promise<void>;
   fetchAllSports: () => Promise<void>;
@@ -22,6 +23,7 @@ export const useSportsStore = create<SportsStore>((set, get) => ({
   tennis: [],
   basketball: [],
   isLoading: false,
+  hasFetched: false,
   error: null,
 
   fetchMatches: async (sport: SportType) => {
@@ -52,10 +54,12 @@ export const useSportsStore = create<SportsStore>((set, get) => ({
 
   fetchAllSports: async () => {
     const store = get();
+    set({ isLoading: true });
     await Promise.all([
       store.fetchMatches("futbol"),
       store.fetchMatches("tenis"),
       store.fetchMatches("basquetbol"),
     ]);
+    set({ hasFetched: true, isLoading: false });
   },
 }));
