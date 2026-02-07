@@ -352,3 +352,24 @@ _(Ver detalles abajo)_
 5. **10 autores con roles**: Editora Nacional, Corresponsal Politico, Periodista Internacional, Editor Deportivo, etc.
 6. **Seed script**: `src/sanity/seed-real.ts` — elimina articulos mock y crea los reales con Portable Text
 7. **Build exitoso**: 50 paginas generadas estaticamente con datos reales de Sanity
+
+---
+
+## Fase 17: Marcadores en Vivo y Buenas Practicas (Completada)
+
+### Cambios realizados:
+
+#### Marcadores deportivos en vivo:
+1. **DeportivaSection ahora usa Zustand store**: Fetch de `/api/sports/*` al montar, auto-refresh cada 60 segundos
+2. **DeportivaSectionWrapper simplificado**: Solo pasa articulos (server), los scores vienen del client via Zustand
+3. **sports-store.ts mejorado**: Nuevo flag `hasFetched` para diferenciar loading inicial vs refresh
+4. **Skeleton loading**: 5 placeholders animados mientras cargan los marcadores
+5. **Tennis route**: Intenta TheSportsDB (Davis Cup Chile, ATP), fallback a datos curados (Copa Davis Chile vs Serbia, ATP Buenos Aires)
+6. **Basketball route**: Intenta TheSportsDB (NBA, Chile basket), fallback a Liga Nacional de Basquetbol
+7. **sports-api.ts**: Nuevas funciones `fetchTennisEvents()` y `fetchBasketballEvents()`
+8. **Mock data actualizado**: Tennis = Copa Davis Chile vs Serbia + ATP Buenos Aires, Basketball = Liga Nacional Basquetbol temporada 2026
+
+#### Gitflow y buenas practicas:
+9. **CLAUDE.md**: Seccion completa de Gitflow (branches, workflow, commit messages, PR checklist)
+10. **CLAUDE.md**: Seccion de Vercel Deployment (config, previews, env vars, webhook)
+11. **Rules actualizadas**: Gitflow obligatorio, no commitear secretos, branches cortos

@@ -102,3 +102,108 @@ export async function fetchTeamNextEvents(teamId: string): Promise<SportsDBEvent
     return [];
   }
 }
+
+/**
+ * Fetch tennis events from TheSportsDB
+ * Tries to find Chile Davis Cup team and ATP events
+ */
+export async function fetchTennisEvents(): Promise<SportsDBEvent[]> {
+  try {
+    const events: SportsDBEvent[] = [];
+
+    // Try to find Chile tennis team for Davis Cup
+    const searchRes = await fetch(
+      `${THESPORTSDB_BASE}/searchteams.php?t=Chile&s=Tennis`,
+      { next: { revalidate: 300 } }
+    );
+
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      const chileTeam = searchData.teams?.[0];
+
+      if (chileTeam) {
+        // Fetch recent and upcoming events for Chile tennis team
+        const [lastEvents, nextEvents] = await Promise.all([
+          fetch(`${THESPORTSDB_BASE}/eventslast.php?id=${chileTeam.idTeam}`, {
+            next: { revalidate: 300 },
+          }).then(r => r.ok ? r.json() : null),
+          fetch(`${THESPORTSDB_BASE}/eventsnext.php?id=${chileTeam.idTeam}`, {
+            next: { revalidate: 300 },
+          }).then(r => r.ok ? r.json() : null),
+        ]);
+
+        if (lastEvents?.results) events.push(...lastEvents.results);
+        if (nextEvents?.events) events.push(...nextEvents.events);
+      }
+    }
+
+    // Try ATP events
+    const atpRes = await fetch(
+      `${THESPORTSDB_BASE}/searchevents.php?e=ATP`,
+      { next: { revalidate: 300 } }
+    );
+
+    if (atpRes.ok) {
+      const atpData = await atpRes.json();
+      if (atpData.event) {
+        events.push(...atpData.event.slice(0, 10)); // Limit ATP results
+      }
+    }
+
+    return events;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch basketball events from TheSportsDB
+ * Tries to find NBA and international basketball events
+ */
+export async function fetchBasketballEvents(): Promise<SportsDBEvent[]> {
+  try {
+    const events: SportsDBEvent[] = [];
+
+    // Try NBA events
+    const nbaRes = await fetch(
+      `${THESPORTSDB_BASE}/eventsnextleague.php?id=4387`,
+      { next: { revalidate: 300 } }
+    );
+
+    if (nbaRes.ok) {
+      const nbaData = await nbaRes.json();
+      if (nbaData.events) {
+        events.push(...nbaData.events.slice(0, 5)); // Limit NBA results
+      }
+    }
+
+    // Try to find Chile basketball team
+    const searchRes = await fetch(
+      `${THESPORTSDB_BASE}/searchteams.php?t=Chile&s=Basketball`,
+      { next: { revalidate: 300 } }
+    );
+
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      const chileTeam = searchData.teams?.[0];
+
+      if (chileTeam) {
+        const [lastEvents, nextEvents] = await Promise.all([
+          fetch(`${THESPORTSDB_BASE}/eventslast.php?id=${chileTeam.idTeam}`, {
+            next: { revalidate: 300 },
+          }).then(r => r.ok ? r.json() : null),
+          fetch(`${THESPORTSDB_BASE}/eventsnext.php?id=${chileTeam.idTeam}`, {
+            next: { revalidate: 300 },
+          }).then(r => r.ok ? r.json() : null),
+        ]);
+
+        if (lastEvents?.results) events.push(...lastEvents.results);
+        if (nextEvents?.events) events.push(...nextEvents.events);
+      }
+    }
+
+    return events;
+  } catch {
+    return [];
+  }
+}

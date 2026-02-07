@@ -175,48 +175,50 @@ export const matches: Match[] = [
     startTime: "2026-02-08T19:00:00Z",
   },
 
-  // TENIS - Live match
+  // TENIS - Copa Davis Chile vs Serbia (Live - Feb 7-8, 2026)
   {
     id: "10",
     homeTeam: {
-      name: "Nicolas Jarry",
-      shortName: "JAR",
-      logo: "🎾",
-    },
-    awayTeam: {
-      name: "Casper Ruud",
-      shortName: "RUU",
-      logo: "🎾",
-    },
-    homeScore: 2,
-    awayScore: 1,
-    status: "live",
-    sport: "tenis",
-    league: "ATP Santiago Open",
-    startTime: "2026-02-06T18:00:00Z",
-    minute: "4to set",
-  },
-
-  // TENIS - Finished matches
-  {
-    id: "11",
-    homeTeam: {
-      name: "Alejandro Tabilo",
+      name: "Alejandro Tabilo (CHI)",
       shortName: "TAB",
       logo: "🎾",
     },
     awayTeam: {
-      name: "Carlos Alcaraz",
-      shortName: "ALC",
+      name: "Novak Djokovic (SRB)",
+      shortName: "DJO",
       logo: "🎾",
     },
     homeScore: 1,
+    awayScore: 1,
+    status: "live",
+    sport: "tenis",
+    league: "Copa Davis - Primera Ronda",
+    startTime: "2026-02-07T17:00:00Z",
+    minute: "3er set",
+  },
+
+  // TENIS - Copa Davis finished
+  {
+    id: "11",
+    homeTeam: {
+      name: "Tomas Barrios (CHI)",
+      shortName: "BAR",
+      logo: "🎾",
+    },
+    awayTeam: {
+      name: "Miomir Kecmanovic (SRB)",
+      shortName: "KEC",
+      logo: "🎾",
+    },
+    homeScore: 0,
     awayScore: 2,
     status: "finished",
     sport: "tenis",
-    league: "ATP Santiago Open",
-    startTime: "2026-02-05T18:00:00Z",
+    league: "Copa Davis - Primera Ronda",
+    startTime: "2026-02-07T14:00:00Z",
   },
+
+  // TENIS - ATP Buenos Aires
   {
     id: "12",
     homeTeam: {
@@ -225,38 +227,74 @@ export const matches: Match[] = [
       logo: "🎾",
     },
     awayTeam: {
-      name: "Felix Auger-Aliassime",
-      shortName: "FAA",
+      name: "Diego Schwartzman",
+      shortName: "SCH",
+      logo: "🎾",
+    },
+    homeScore: 2,
+    awayScore: 1,
+    status: "finished",
+    sport: "tenis",
+    league: "ATP Buenos Aires 250",
+    startTime: "2026-02-06T18:00:00Z",
+  },
+  {
+    id: "12b",
+    homeTeam: {
+      name: "Alejandro Tabilo",
+      shortName: "TAB",
+      logo: "🎾",
+    },
+    awayTeam: {
+      name: "Sebastian Baez",
+      shortName: "BAE",
       logo: "🎾",
     },
     homeScore: 2,
     awayScore: 0,
     status: "finished",
     sport: "tenis",
-    league: "ATP Santiago Open",
-    startTime: "2026-02-05T19:30:00Z",
+    league: "ATP Buenos Aires 250",
+    startTime: "2026-02-06T20:30:00Z",
   },
 
-  // TENIS - Upcoming matches
+  // TENIS - Upcoming Copa Davis
   {
     id: "13",
     homeTeam: {
-      name: "Nicolas Jarry",
-      shortName: "JAR",
+      name: "Cristian Garin (CHI)",
+      shortName: "GAR",
       logo: "🎾",
     },
     awayTeam: {
-      name: "Cristian Garin",
-      shortName: "GAR",
+      name: "Laslo Djere (SRB)",
+      shortName: "DJE",
       logo: "🎾",
     },
     status: "upcoming",
     sport: "tenis",
-    league: "ATP Santiago Open",
-    startTime: "2026-02-07T19:00:00Z",
+    league: "Copa Davis - Primera Ronda",
+    startTime: "2026-02-08T15:00:00Z",
+  },
+  {
+    id: "13b",
+    homeTeam: {
+      name: "Chile Dobles",
+      shortName: "CHI",
+      logo: "🎾",
+    },
+    awayTeam: {
+      name: "Serbia Dobles",
+      shortName: "SRB",
+      logo: "🎾",
+    },
+    status: "upcoming",
+    sport: "tenis",
+    league: "Copa Davis - Primera Ronda",
+    startTime: "2026-02-08T18:00:00Z",
   },
 
-  // BASQUETBOL - Live match
+  // BASQUETBOL - Live matches (Liga Nacional - Feb 7, 2026)
   {
     id: "14",
     homeTeam: {
@@ -274,11 +312,11 @@ export const matches: Match[] = [
     status: "live",
     sport: "basquetbol",
     league: "Liga Nacional de Basquetbol",
-    startTime: "2026-02-06T20:00:00Z",
-    minute: "4Q",
+    startTime: "2026-02-07T20:00:00Z",
+    minute: "4Q - 3:45",
   },
 
-  // BASQUETBOL - Finished match
+  // BASQUETBOL - Finished matches
   {
     id: "15",
     homeTeam: {
@@ -296,7 +334,81 @@ export const matches: Match[] = [
     status: "finished",
     sport: "basquetbol",
     league: "Liga Nacional de Basquetbol",
-    startTime: "2026-02-05T18:00:00Z",
+    startTime: "2026-02-06T21:30:00Z",
+  },
+  {
+    id: "15b",
+    homeTeam: {
+      name: "CD Universidad Catolica",
+      shortName: "UC",
+      logo: "🏀",
+    },
+    awayTeam: {
+      name: "Colegio Los Leones",
+      shortName: "LEO",
+      logo: "🏀",
+    },
+    homeScore: 92,
+    awayScore: 88,
+    status: "finished",
+    sport: "basquetbol",
+    league: "Liga Nacional de Basquetbol",
+    startTime: "2026-02-06T19:00:00Z",
+  },
+  {
+    id: "15c",
+    homeTeam: {
+      name: "Boston College",
+      shortName: "BOS",
+      logo: "🏀",
+    },
+    awayTeam: {
+      name: "Stadio Italiano",
+      shortName: "STI",
+      logo: "🏀",
+    },
+    homeScore: 76,
+    awayScore: 81,
+    status: "finished",
+    sport: "basquetbol",
+    league: "Liga Nacional de Basquetbol",
+    startTime: "2026-02-05T20:00:00Z",
+  },
+
+  // BASQUETBOL - Upcoming matches
+  {
+    id: "16",
+    homeTeam: {
+      name: "Municipal Puente Alto",
+      shortName: "MPA",
+      logo: "🏀",
+    },
+    awayTeam: {
+      name: "CD Valdivia",
+      shortName: "VAL",
+      logo: "🏀",
+    },
+    status: "upcoming",
+    sport: "basquetbol",
+    league: "Liga Nacional de Basquetbol",
+    startTime: "2026-02-08T19:30:00Z",
+  },
+  {
+    id: "16b",
+    homeTeam: {
+      name: "Colegio Los Leones",
+      shortName: "LEO",
+      logo: "🏀",
+    },
+    awayTeam: {
+      name: "ABA Ancud",
+      shortName: "ANC",
+      logo: "🏀",
+    },
+    status: "upcoming",
+    sport: "basquetbol",
+    league: "Liga Nacional de Basquetbol",
+    startTime: "2026-02-08T21:00:00Z",
   },
 ];
 
