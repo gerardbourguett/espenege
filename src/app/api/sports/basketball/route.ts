@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMatchesBySport } from "@/data/sports-fixtures";
-import { fetchBasketballEvents, transformSportsDBEvent } from "@/lib/sports-api";
+import { fetchBasketballMatches } from "@/lib/basketball-api";
 import type { Match } from "@/types/sports";
 
 // Cache for 5 minutes
@@ -16,15 +16,11 @@ export async function GET() {
 
   let matches: Match[] = [];
 
-  // Try to fetch from TheSportsDB (NBA, international basketball)
+  // Try API-Basketball (RapidAPI) for LNB Chile + NBA
   try {
-    const events = await fetchBasketballEvents();
-
-    if (events.length > 0) {
-      matches = events.map((event) => transformSportsDBEvent(event, "basquetbol"));
-    }
+    matches = await fetchBasketballMatches();
   } catch (error) {
-    console.error("Error fetching basketball events from TheSportsDB:", error);
+    console.error("Error fetching basketball events from API-Basketball:", error);
   }
 
   // Fallback to curated Chilean basketball data (Liga Nacional de Basquetbol)
@@ -38,7 +34,9 @@ export async function GET() {
     const statusDiff = statusOrder[a.status] - statusOrder[b.status];
     if (statusDiff !== 0) return statusDiff;
 
-    // Within same status, sort by start time (most recent/soonest first)
+    if (a.status === "upcoming") {
+      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+    }
     return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
   });
 
