@@ -810,3 +810,47 @@ export function getRelatedArticles(article: Article, limit: number = 3): Article
 export function getBreakingNews(): Article[] {
   return articles.filter((article) => article.isBreaking === true);
 }
+
+/**
+ * Search articles by query in title, excerpt, and tags (case-insensitive)
+ */
+export function searchArticles(query: string): Article[] {
+  const q = query.toLowerCase();
+  return articles
+    .filter(
+      (a) =>
+        a.title.toLowerCase().includes(q) ||
+        a.excerpt.toLowerCase().includes(q) ||
+        a.tags.some((tag) => tag.toLowerCase().includes(q))
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    )
+    .slice(0, 20);
+}
+
+/**
+ * Get articles filtered by exact tag
+ */
+export function getArticlesByTag(tag: string): Article[] {
+  return articles
+    .filter((a) => a.tags.includes(tag))
+    .sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+}
+
+/**
+ * Get all unique tags across all articles
+ */
+export function getAllTags(): string[] {
+  const tagSet = new Set<string>();
+  for (const article of articles) {
+    for (const tag of article.tags) {
+      tagSet.add(tag);
+    }
+  }
+  return Array.from(tagSet).sort();
+}

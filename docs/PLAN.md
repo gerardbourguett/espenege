@@ -373,3 +373,146 @@ _(Ver detalles abajo)_
 9. **CLAUDE.md**: Seccion completa de Gitflow (branches, workflow, commit messages, PR checklist)
 10. **CLAUDE.md**: Seccion de Vercel Deployment (config, previews, env vars, webhook)
 11. **Rules actualizadas**: Gitflow obligatorio, no commitear secretos, branches cortos
+
+---
+
+## Fase 18: SportAPI7 — Escudos Reales y Datos Primera Division 2026
+
+**Estado**: Completada
+**Fecha**: 2026-02-07
+
+### Objetivo:
+Reemplazar TheSportsDB (datos viejos, sin escudos) por SportAPI7 (RapidAPI) como fuente primaria de datos de futbol chileno. Usar escudos reales de equipos via SofaScore CDN.
+
+### Cambios realizados:
+
+#### Integracion SportAPI7:
+1. **sports-config.ts**: Nuevo `SPORTAPI7_BASE`, `SPORTAPI7_HOST`, helper `teamImageUrl()` y `tournamentImageUrl()` para URLs de escudos SofaScore
+2. **sports-config.ts**: `CHILEAN_TEAMS` con 19 equipos chilenos y sus IDs en SportAPI7 (Colo Colo=3155, U Chile=3161, UC=3151, etc.)
+3. **sports-config.ts**: `PRIMERA_DIVISION` con `uniqueTournamentId: 11653` y `seasonId: 88493` (temporada 2026)
+4. **sports-api.ts**: Nuevas funciones `fetchLeagueLastEvents()`, `fetchLeagueNextEvents()`, `fetchLiveChileanEvents()` usando SportAPI7
+5. **sports-api.ts**: Transformer `transformSportAPI7Event()` que mapea respuesta SportAPI7 al tipo Match con URLs de escudos reales
+6. **football/route.ts**: Reescrito para usar SportAPI7 (live + last + next en paralelo), fallback a mock si falla
+
+#### Escudos reales:
+7. **TeamLogo.tsx**: Nuevo componente client que renderiza `<img>` si el logo es URL, emoji si no, con fallback a iniciales en circulo si la imagen falla
+8. **SportScoreCard.tsx**: Usa `TeamLogo` en lugar de emoji directo
+9. **MatchFixtureList.tsx**: Usa `TeamLogo` para ambos equipos
+10. **index.ts**: Export barrel actualizado con `TeamLogo`
+
+#### Configuracion:
+11. **next.config.ts**: `api.sofascore.app` agregado a `remotePatterns` para escudos de equipos
+
+### Datos disponibles:
+- 10 partidos de fecha 1 (finalizados) con marcadores reales
+- 30 partidos de fecha 2 (proximos) con horarios confirmados
+- Escudos PNG reales para todos los equipos de Primera Division
+- Deteccion de partidos en vivo filtrando feed global por torneos chilenos (11653, 11157, 384, 480)
+
+### Endpoints SportAPI7 usados:
+- `GET /unique-tournament/{id}/season/{sid}/events/last/0` — Ultimos partidos terminados
+- `GET /unique-tournament/{id}/season/{sid}/events/next/0` — Proximos partidos
+- `GET /sport/football/events/live` — Partidos en vivo (filtrado por torneos chilenos)
+- `GET /event/{id}` — Detalle enriquecido de un partido
+
+---
+
+## Fase 19: Ligas Chilenas + APIs Tennis/Basket + Pagina Detalle Partido
+
+**Estado**: Completada
+**Fecha**: 2026-02-07
+
+### Objetivo:
+Expandir el tracking de futbol chileno (Copa Chile, Segunda Division), reemplazar TheSportsDB con APIs dedicadas para tennis y basketball, y crear pagina de detalle de partido.
+
+### Cambios realizados:
+
+#### Expansion de ligas chilenas de futbol:
+1. **sports-config.ts**: Nuevo array `CHILEAN_FOOTBALL_LEAGUES` con 3 ligas: Primera Division (11653), Copa Chile (11157), Segunda Division (18834)
+2. **sports-config.ts**: Nuevo `TRACKED_TOURNAMENT_IDS` Set con 5 torneos (Primera, Copa Chile, Segunda, Libertadores, Sudamericana)
+3. **sports-api.ts**: `fetchLeagueLastEvents()` y `fetchLeagueNextEvents()` ahora consultan las 3 ligas en paralelo
+4. **sports-api.ts**: `fetchLiveChileanEvents()` usa `TRACKED_TOURNAMENT_IDS` para filtrar 5 torneos
+
+#### Eliminacion de TheSportsDB:
+5. **sports-api.ts**: Removidas todas las funciones TheSportsDB (`fetchTennisEvents`, `fetchBasketballEvents`, `transformSportsDBEvent`, `mapSportsDBStatus`, `getShortName`)
+6. **sports-config.ts**: Eliminados `THESPORTSDB_BASE` y `CHILEAN_FOOTBALL_TEAMS` (legacy)
+
+#### Integracion TennisApi (RapidAPI):
+7. **tennis-api.ts**: Nuevo modulo con funciones `fetchChileanTennisEvents()`, `fetchLiveTennisEvents()`, `transformTennisEvent()`
+8. **sports-config.ts**: `TENNISAPI_HOST`, `TENNISAPI_BASE`, `TENNIS_PLAYERS_CL` (Tabilo, Jarry, Garin, Barrios), `TENNIS_TOURNAMENTS`
+9. **tennis/route.ts**: Reescrito para usar TennisApi, busca partidos de jugadores chilenos en ATP/WTA/Davis Cup
+10. Consulta eventos de hoy, ayer y manana para cobertura completa, filtra por nombres de jugadores chilenos
+
+#### Integracion API-Basketball (RapidAPI):
+11. **basketball-api.ts**: Nuevo modulo con funciones `fetchBasketballMatches()`, `transformBasketballGame()`
+12. **sports-config.ts**: `BASKETBALL_API_HOST`, `BASKETBALL_API_BASE`, `BASKETBALL_LEAGUES` (LNB Chile id:354, NBA id:12)
+13. **basketball/route.ts**: Reescrito para usar API-Basketball, consulta LNB Chile + NBA
+14. Busca partidos live, hoy, ayer y manana para ambas ligas
+
+#### Pagina de detalle de partido:
+15. **match-api.ts**: `fetchMatchById()` que consulta SportAPI7 `/event/{id}` para datos enriquecidos (venue, periodScores, round)
+16. **MatchDetail.tsx**: Componente con escudos grandes (64px), marcador central, info de periodo, venue, ronda, fecha
+17. **MatchDetailSkeleton.tsx**: Loading state con skeleton placeholders
+18. **deportiva/partido/[matchId]/page.tsx**: Server component con `generateMetadata()` para SEO, breadcrumb, Suspense
+19. **SportScoreCard.tsx**: Envuelto en `<Link>` a `/deportiva/partido/{match.id}` — cards clickeables
+20. **MatchFixtureList.tsx**: Filas envueltas en `<Link>` con hover state
+21. **index.ts**: Exporta `MatchDetail` y `MatchDetailSkeleton`
+
+#### Tipos extendidos:
+22. **sports.ts**: Nuevos campos opcionales en `Match`: `venue`, `round`, `periodScores` (array de `PeriodScore`)
+
+### APIs usadas:
+- **TennisApi** (tennisapi1.p.rapidapi.com): `/events/live`, `/events/{date}` — misma `RAPIDAPI_KEY`
+- **API-Basketball** (api-basketball.p.rapidapi.com): `/games?league=&season=&date=`, `/games?live=all` — misma `RAPIDAPI_KEY`
+- **SportAPI7**: `/event/{id}` — detalle enriquecido de partido
+
+### Mock fallback:
+- Todas las rutas API mantienen fallback a `getMatchesBySport()` si las APIs reales no retornan datos
+- Mock data en `sports-fixtures.ts` sigue disponible como respaldo
+
+---
+
+## Fase 20: Busqueda de Noticias + Pagina de Tag
+
+**Estado**: Completada
+**Fecha**: 2026-02-07
+
+### Objetivo:
+Hacer funcional el SearchOverlay (antes placeholder) y crear pagina `/tag/[tag]` con tags clickeables en articulos.
+
+### Cambios realizados:
+
+#### Capa de datos:
+1. **articles.ts**: Nuevos helpers mock `searchArticles()`, `getArticlesByTag()`, `getAllTags()`
+2. **queries.ts**: GROQ queries `searchArticlesQuery` (match en title/excerpt/tags) y `articlesByTagQuery`
+3. **dal.ts**: Funciones DAL `searchArticles()` y `getArticlesByTag()` con Sanity/mock fallback
+
+#### API de busqueda:
+4. **`/api/search`**: Route handler con validacion de query minimo 2 chars, retorna JSON ligero (id, slug, title, excerpt, category, imageUrl, publishedAt, tags)
+
+#### SearchOverlay funcional:
+5. **SearchOverlay.tsx**: Reescrito de placeholder a componente funcional
+   - Debounce 300ms con useEffect + setTimeout
+   - Fetch a `/api/search?q=...` cuando query >= 2 chars
+   - Estados: vacio (icono + etiquetas populares), loading (skeletons), sin resultados, con resultados
+   - Click en resultado cierra dialog y navega al articulo
+   - Etiquetas populares como sugerencias (links a `/tag/[tag]`)
+   - Color de categoria en barra lateral y badge por resultado
+
+#### Pagina de tag:
+6. **`/tag/[tag]/page.tsx`**: Server component con `generateMetadata()`, BreadcrumbNav, header con icono Tag, grid de NewsCardStandard, Sidebar con Mas Leidas
+7. Estado vacio amigable cuando no hay articulos con la etiqueta
+
+#### Tags clickeables:
+8. **articulo/[slug]/page.tsx**: Tags cambiados de `<span>` a `<Link href="/tag/{tag}">` con mismos estilos
+
+### Archivos creados (2):
+- `src/app/api/search/route.ts`
+- `src/app/tag/[tag]/page.tsx`
+
+### Archivos modificados (5):
+- `src/data/articles.ts` — helpers de busqueda y tags
+- `src/sanity/queries.ts` — GROQ queries
+- `src/lib/dal.ts` — funciones DAL
+- `src/components/layout/SearchOverlay.tsx` — componente funcional
+- `src/app/articulo/[slug]/page.tsx` — tags clickeables

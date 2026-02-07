@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMatchesBySport } from "@/data/sports-fixtures";
-import { fetchTennisEvents, transformSportsDBEvent } from "@/lib/sports-api";
+import { fetchChileanTennisEvents } from "@/lib/tennis-api";
 import type { Match } from "@/types/sports";
 
 // Cache for 5 minutes
@@ -16,18 +16,14 @@ export async function GET() {
 
   let matches: Match[] = [];
 
-  // Try to fetch from TheSportsDB (Chile Davis Cup, ATP events)
+  // Try TennisApi (RapidAPI) for Chilean tennis players
   try {
-    const events = await fetchTennisEvents();
-
-    if (events.length > 0) {
-      matches = events.map((event) => transformSportsDBEvent(event, "tenis"));
-    }
+    matches = await fetchChileanTennisEvents();
   } catch (error) {
-    console.error("Error fetching tennis events from TheSportsDB:", error);
+    console.error("Error fetching tennis events from TennisApi:", error);
   }
 
-  // Fallback to curated current mock data if no API results
+  // Fallback to curated mock data if no API results
   if (matches.length === 0) {
     matches = getMatchesBySport("tenis");
   }
@@ -38,7 +34,9 @@ export async function GET() {
     const statusDiff = statusOrder[a.status] - statusOrder[b.status];
     if (statusDiff !== 0) return statusDiff;
 
-    // Within same status, sort by start time (most recent/soonest first)
+    if (a.status === "upcoming") {
+      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+    }
     return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
   });
 

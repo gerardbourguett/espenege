@@ -66,3 +66,15 @@ export const allArticleSlugsQuery = groq`
     "slug": slug.current
   }
 `;
+
+export const searchArticlesQuery = groq`
+  *[_type == "article" && (title match $q || excerpt match $q || $q in tags)] | order(publishedAt desc)[0...20]{
+    ${articleFields}
+  }
+`;
+
+export const articlesByTagQuery = groq`
+  *[_type == "article" && $tag in tags] | order(publishedAt desc){
+    ${articleFields}
+  }
+`;

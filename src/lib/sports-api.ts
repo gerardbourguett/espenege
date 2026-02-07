@@ -1,209 +1,183 @@
 import type { Match } from "@/types/sports";
-import { THESPORTSDB_BASE, CHILEAN_FOOTBALL_TEAMS } from "./sports-config";
+import {
+  SPORTAPI7_BASE,
+  SPORTAPI7_HOST,
+  CHILEAN_FOOTBALL_LEAGUES,
+  TRACKED_TOURNAMENT_IDS,
+  teamImageUrl,
+} from "./sports-config";
 
-/**
- * TheSportsDB event structure (partial)
- */
-interface SportsDBEvent {
-  idEvent: string;
-  strHomeTeam: string;
-  strAwayTeam: string;
-  intHomeScore: string | null;
-  intAwayScore: string | null;
-  dateEvent: string;
-  strTime: string;
-  strLeague: string;
-  strStatus: string;
-  strSport: string;
+// ── SportAPI7 Types ───────────────────────────────────────────────────
+
+interface SportAPI7Team {
+  id: number;
+  name: string;
+  shortName?: string;
+  nameCode?: string;
 }
 
-function mapStatus(status: string): Match["status"] {
-  if (!status || status === "Not Started" || status === "NS") return "upcoming";
-  if (status === "Match Finished" || status === "FT" || status === "AET" || status === "PEN") return "finished";
-  if (status === "1H" || status === "2H" || status === "HT" || status === "ET" || status === "Live") return "live";
-  return "upcoming";
+interface SportAPI7Score {
+  current?: number;
+  display?: number;
+  period1?: number;
+  period2?: number;
 }
 
-function getShortName(name: string): string {
-  const team = CHILEAN_FOOTBALL_TEAMS.find(
-    (t) => t.name.toLowerCase() === name.toLowerCase()
-  );
-  if (team) return team.shortName;
-  return name.substring(0, 3).toUpperCase();
+interface SportAPI7Status {
+  code: number;
+  description: string;
+  type: string;
 }
 
-/**
- * Transform a TheSportsDB event into our Match type
- */
-export function transformSportsDBEvent(
-  event: SportsDBEvent,
-  sport: Match["sport"] = "futbol"
-): Match {
-  const status = mapStatus(event.strStatus);
+interface SportAPI7Event {
+  id: number;
+  tournament?: {
+    name?: string;
+    uniqueTournament?: { id: number; name?: string };
+  };
+  homeTeam: SportAPI7Team;
+  awayTeam: SportAPI7Team;
+  homeScore?: SportAPI7Score;
+  awayScore?: SportAPI7Score;
+  status: SportAPI7Status;
+  startTimestamp: number;
+  roundInfo?: { round?: number };
+}
 
+// ── SportAPI7 Helpers ─────────────────────────────────────────────────
+
+function sportapi7Headers(): HeadersInit {
   return {
-    id: `sdb-${event.idEvent}`,
-    homeTeam: {
-      name: event.strHomeTeam,
-      shortName: getShortName(event.strHomeTeam),
-      logo: sport === "futbol" ? "⚽" : sport === "tenis" ? "🎾" : "🏀",
-    },
-    awayTeam: {
-      name: event.strAwayTeam,
-      shortName: getShortName(event.strAwayTeam),
-      logo: sport === "futbol" ? "⚽" : sport === "tenis" ? "🎾" : "🏀",
-    },
-    homeScore:
-      event.intHomeScore !== null ? parseInt(event.intHomeScore) : undefined,
-    awayScore:
-      event.intAwayScore !== null ? parseInt(event.intAwayScore) : undefined,
-    status,
-    sport,
-    league: event.strLeague,
-    startTime: `${event.dateEvent}T${event.strTime || "00:00:00"}Z`,
-    minute: status === "live" ? event.strStatus : undefined,
+    "x-rapidapi-key": process.env.RAPIDAPI_KEY || "",
+    "x-rapidapi-host": SPORTAPI7_HOST,
   };
 }
 
+function mapSportAPI7Status(status: SportAPI7Status): Match["status"] {
+  if (status.type === "inprogress") return "live";
+  if (status.type === "finished") return "finished";
+  return "upcoming";
+}
+
+function sportapi7Minute(status: SportAPI7Status): string | undefined {
+  if (status.type !== "inprogress") return undefined;
+  // Map common status descriptions
+  const desc = status.description;
+  if (desc === "Halftime" || desc === "HT") return "ET";
+  if (desc === "1st half") return `${status.code}'`;
+  if (desc === "2nd half") return `${status.code}'`;
+  return desc;
+}
+
 /**
- * Fetch recent (past) events for a Chilean team from TheSportsDB
+ * Transform a SportAPI7 event into our Match type
  */
-export async function fetchTeamLastEvents(teamId: string): Promise<SportsDBEvent[]> {
+export function transformSportAPI7Event(event: SportAPI7Event): Match {
+  const matchStatus = mapSportAPI7Status(event.status);
+
+  return {
+    id: `sa7-${event.id}`,
+    homeTeam: {
+      name: event.homeTeam.name,
+      shortName: event.homeTeam.shortName || event.homeTeam.nameCode || event.homeTeam.name,
+      logo: teamImageUrl(event.homeTeam.id),
+    },
+    awayTeam: {
+      name: event.awayTeam.name,
+      shortName: event.awayTeam.shortName || event.awayTeam.nameCode || event.awayTeam.name,
+      logo: teamImageUrl(event.awayTeam.id),
+    },
+    homeScore: event.homeScore?.current,
+    awayScore: event.awayScore?.current,
+    status: matchStatus,
+    sport: "futbol",
+    league: event.tournament?.uniqueTournament?.name || event.tournament?.name || "Liga Chilena",
+    startTime: new Date(event.startTimestamp * 1000).toISOString(),
+    minute: sportapi7Minute(event.status),
+  };
+}
+
+// ── SportAPI7 Fetch Functions ─────────────────────────────────────────
+
+/**
+ * Fetch the latest finished events from all tracked Chilean football leagues
+ */
+export async function fetchLeagueLastEvents(): Promise<Match[]> {
+  const results = await Promise.all(
+    CHILEAN_FOOTBALL_LEAGUES.map(async ({ uniqueTournamentId, seasonId }) => {
+      try {
+        const url = `${SPORTAPI7_BASE}/unique-tournament/${uniqueTournamentId}/season/${seasonId}/events/last/0`;
+        const res = await fetch(url, { headers: sportapi7Headers(), next: { revalidate: 300 } });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.events || []).map(transformSportAPI7Event);
+      } catch {
+        return [];
+      }
+    })
+  );
+  return results.flat();
+}
+
+/**
+ * Fetch the next upcoming events from all tracked Chilean football leagues
+ */
+export async function fetchLeagueNextEvents(): Promise<Match[]> {
+  const results = await Promise.all(
+    CHILEAN_FOOTBALL_LEAGUES.map(async ({ uniqueTournamentId, seasonId }) => {
+      try {
+        const url = `${SPORTAPI7_BASE}/unique-tournament/${uniqueTournamentId}/season/${seasonId}/events/next/0`;
+        const res = await fetch(url, { headers: sportapi7Headers(), next: { revalidate: 300 } });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.events || []).map(transformSportAPI7Event);
+      } catch {
+        return [];
+      }
+    })
+  );
+  return results.flat();
+}
+
+/**
+ * Fetch live Chilean football events (filters global live feed)
+ */
+export async function fetchLiveChileanEvents(): Promise<Match[]> {
+  const url = `${SPORTAPI7_BASE}/sport/football/events/live`;
+
+  const res = await fetch(url, { headers: sportapi7Headers(), cache: "no-store" });
+  if (!res.ok) return [];
+  const data = await res.json();
+
+  // Filter for Chilean leagues
+  const chileanEvents = (data.events || []).filter(
+    (e: SportAPI7Event) =>
+      e.tournament?.uniqueTournament?.id !== undefined &&
+      TRACKED_TOURNAMENT_IDS.has(e.tournament.uniqueTournament.id)
+  );
+
+  return chileanEvents.map(transformSportAPI7Event);
+}
+
+// ── Match Detail (SportAPI7) ─────────────────────────────────────────
+
+export interface SportAPI7EventDetail extends SportAPI7Event {
+  venue?: { stadium?: string; city?: { name?: string }; country?: { name?: string } };
+  homeScore?: SportAPI7Score & { period1?: number; period2?: number };
+  awayScore?: SportAPI7Score & { period1?: number; period2?: number };
+}
+
+/**
+ * Fetch a single event by ID from SportAPI7
+ */
+export async function fetchEventById(eventId: number): Promise<SportAPI7EventDetail | null> {
   try {
-    const res = await fetch(`${THESPORTSDB_BASE}/eventslast.php?id=${teamId}`, {
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return [];
+    const url = `${SPORTAPI7_BASE}/event/${eventId}`;
+    const res = await fetch(url, { headers: sportapi7Headers(), next: { revalidate: 60 } });
+    if (!res.ok) return null;
     const data = await res.json();
-    return (data.results || []).filter(
-      (e: SportsDBEvent) =>
-        e.strLeague?.includes("Chile") || e.strLeague?.includes("Libertadores")
-    );
+    return data.event || null;
   } catch {
-    return [];
-  }
-}
-
-/**
- * Fetch upcoming events for a Chilean team from TheSportsDB
- */
-export async function fetchTeamNextEvents(teamId: string): Promise<SportsDBEvent[]> {
-  try {
-    const res = await fetch(`${THESPORTSDB_BASE}/eventsnext.php?id=${teamId}`, {
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return (data.events || []).filter(
-      (e: SportsDBEvent) =>
-        e.strLeague?.includes("Chile") || e.strLeague?.includes("Libertadores")
-    );
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Fetch tennis events from TheSportsDB
- * Tries to find Chile Davis Cup team and ATP events
- */
-export async function fetchTennisEvents(): Promise<SportsDBEvent[]> {
-  try {
-    const events: SportsDBEvent[] = [];
-
-    // Try to find Chile tennis team for Davis Cup
-    const searchRes = await fetch(
-      `${THESPORTSDB_BASE}/searchteams.php?t=Chile&s=Tennis`,
-      { next: { revalidate: 300 } }
-    );
-
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      const chileTeam = searchData.teams?.[0];
-
-      if (chileTeam) {
-        // Fetch recent and upcoming events for Chile tennis team
-        const [lastEvents, nextEvents] = await Promise.all([
-          fetch(`${THESPORTSDB_BASE}/eventslast.php?id=${chileTeam.idTeam}`, {
-            next: { revalidate: 300 },
-          }).then(r => r.ok ? r.json() : null),
-          fetch(`${THESPORTSDB_BASE}/eventsnext.php?id=${chileTeam.idTeam}`, {
-            next: { revalidate: 300 },
-          }).then(r => r.ok ? r.json() : null),
-        ]);
-
-        if (lastEvents?.results) events.push(...lastEvents.results);
-        if (nextEvents?.events) events.push(...nextEvents.events);
-      }
-    }
-
-    // Try ATP events
-    const atpRes = await fetch(
-      `${THESPORTSDB_BASE}/searchevents.php?e=ATP`,
-      { next: { revalidate: 300 } }
-    );
-
-    if (atpRes.ok) {
-      const atpData = await atpRes.json();
-      if (atpData.event) {
-        events.push(...atpData.event.slice(0, 10)); // Limit ATP results
-      }
-    }
-
-    return events;
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Fetch basketball events from TheSportsDB
- * Tries to find NBA and international basketball events
- */
-export async function fetchBasketballEvents(): Promise<SportsDBEvent[]> {
-  try {
-    const events: SportsDBEvent[] = [];
-
-    // Try NBA events
-    const nbaRes = await fetch(
-      `${THESPORTSDB_BASE}/eventsnextleague.php?id=4387`,
-      { next: { revalidate: 300 } }
-    );
-
-    if (nbaRes.ok) {
-      const nbaData = await nbaRes.json();
-      if (nbaData.events) {
-        events.push(...nbaData.events.slice(0, 5)); // Limit NBA results
-      }
-    }
-
-    // Try to find Chile basketball team
-    const searchRes = await fetch(
-      `${THESPORTSDB_BASE}/searchteams.php?t=Chile&s=Basketball`,
-      { next: { revalidate: 300 } }
-    );
-
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      const chileTeam = searchData.teams?.[0];
-
-      if (chileTeam) {
-        const [lastEvents, nextEvents] = await Promise.all([
-          fetch(`${THESPORTSDB_BASE}/eventslast.php?id=${chileTeam.idTeam}`, {
-            next: { revalidate: 300 },
-          }).then(r => r.ok ? r.json() : null),
-          fetch(`${THESPORTSDB_BASE}/eventsnext.php?id=${chileTeam.idTeam}`, {
-            next: { revalidate: 300 },
-          }).then(r => r.ok ? r.json() : null),
-        ]);
-
-        if (lastEvents?.results) events.push(...lastEvents.results);
-        if (nextEvents?.events) events.push(...nextEvents.events);
-      }
-    }
-
-    return events;
-  } catch {
-    return [];
+    return null;
   }
 }

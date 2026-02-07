@@ -33,6 +33,14 @@ export type SportType =
   | "otros";       // Other sports
 
 /**
+ * Period/set scores for match detail
+ */
+export interface PeriodScore {
+  home: number;
+  away: number;
+}
+
+/**
  * Match/game information
  */
 export interface Match {
@@ -56,6 +64,12 @@ export interface Match {
   startTime: string;
   /** Current match minute for live matches (e.g., "45+2'", "HT") */
   minute?: string;
+  /** Venue/stadium name (match detail) */
+  venue?: string;
+  /** Round info (e.g., "Fecha 2", "Cuartos de Final") */
+  round?: string;
+  /** Period scores: 1st half, 2nd half (football), quarters (basketball), sets (tennis) */
+  periodScores?: PeriodScore[];
 }
 
 /**
