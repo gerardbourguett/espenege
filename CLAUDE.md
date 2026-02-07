@@ -28,16 +28,16 @@ Spanish-language news portal "SPNG Media" focused on Chile with 6 sections. Feat
 
 **API Routes**:
 - `/api/weather` — OpenWeatherMap proxy, 30min cache, mock fallback
-- `/api/sports/football` — API-Football proxy for Chilean leagues, 5min cache
-- `/api/sports/tennis` — Tennis data (mock, ready for API integration)
-- `/api/sports/basketball` — Basketball data (mock, ready for API integration)
+- `/api/sports/football` — TheSportsDB proxy for Chilean football, 5min cache, mock fallback
+- `/api/sports/tennis` — TheSportsDB (Davis Cup/ATP) + curated Chilean tennis data, 5min cache
+- `/api/sports/basketball` — TheSportsDB (NBA) + curated Liga Nacional Basquetbol, 5min cache
 - `/api/newsletter/subscribe` — Resend integration, zod validation
 - `/api/revalidate` — Sanity webhook for on-demand revalidation
 - `/rss.xml` — RSS 2.0 feed with latest 50 articles
 
 **Zustand Stores** (`src/stores/`):
 - `weather-store.ts` — Weather data, loading state, fetch function
-- `sports-store.ts` — Sports matches by type, fetch functions
+- `sports-store.ts` — Sports matches by type, auto-refresh every 60s, `hasFetched` flag
 - `newsletter-store.ts` — Subscribe function, loading/subscribed state
 
 **News Cards**: 4 separate component files — `NewsCardFeatured` (overlay image), `NewsCardStandard` (grid card), `NewsCardHorizontal` (sidebar), `NewsCardCompact` (numbered list). These are not variants of one component.
@@ -82,9 +82,94 @@ See `.env.local.example` for all required variables. The app works without any e
 
 See `docs/PLAN.md` for detailed implementation phases and roadmap
 
+## Git Workflow (Gitflow)
+
+This project uses **Gitflow** branching model.
+
+### Branches
+
+| Branch | Purpose | Deploys to |
+|--------|---------|------------|
+| `main` | Production-ready code | Vercel Production |
+| `develop` | Integration branch for features | Vercel Preview |
+| `feature/*` | New features (`feature/add-search`) | — |
+| `fix/*` | Bug fixes (`fix/weather-cache`) | — |
+| `hotfix/*` | Urgent production fixes (`hotfix/broken-rss`) | — |
+| `release/*` | Release preparation (`release/v1.2.0`) | — |
+
+### Workflow
+
+1. **New feature**: Branch from `develop` → `feature/my-feature`
+2. **Develop**: Commit to feature branch, push, open PR to `develop`
+3. **Review**: PR requires passing build (`npm run build`) + lint (`npm run lint`)
+4. **Merge**: Squash-merge into `develop` (auto-deploys Preview on Vercel)
+5. **Release**: Branch `release/vX.Y.Z` from `develop`, final QA, merge to `main` AND back to `develop`
+6. **Hotfix**: Branch from `main` → `hotfix/description`, merge to `main` AND `develop`
+
+### Commit Messages
+
+Use conventional commits:
+```
+feat: add newsletter subscription form
+fix: correct weather cache expiration
+refactor: move DAL to async pattern
+docs: update PLAN.md with phase 16
+chore: update dependencies
+```
+
+### Branch Naming
+
+```
+feature/add-regional-category
+feature/sanity-image-optimization
+fix/score-strip-loading-state
+hotfix/rss-feed-empty-content
+release/v1.0.0
+```
+
+### PR Checklist
+
+- [ ] `npm run build` passes (all pages generate)
+- [ ] `npm run lint` passes
+- [ ] No `.env` secrets committed
+- [ ] Responsive tested (mobile + desktop)
+- [ ] Spanish content only (no untranslated strings)
+
+## Vercel Deployment
+
+### Configuration
+
+- **Framework**: Next.js (auto-detected)
+- **Build command**: `npm run build`
+- **Output directory**: `.next` (default)
+- **Node.js version**: 18.x+
+- **Environment variables**: Set in Vercel dashboard (same as `.env.local`)
+
+### Preview Deployments
+
+Every push to a PR branch creates a Vercel Preview deployment. Use these to test before merging.
+
+### Production Deployments
+
+Merging to `main` triggers automatic production deployment.
+
+### Environment Variables in Vercel
+
+All env vars from `.env.local` must be set in Vercel Project Settings > Environment Variables. Scope them appropriately:
+- `NEXT_PUBLIC_*` vars: Production + Preview + Development
+- `SANITY_API_TOKEN`, `RESEND_API_KEY`, etc.: Production + Preview only
+- `SANITY_REVALIDATE_SECRET`: Production only
+
+### Sanity Webhook (Production)
+
+Configure in Sanity dashboard to call `https://your-domain.vercel.app/api/revalidate` with the `SANITY_REVALIDATE_SECRET` as query param on document publish.
+
 ## Rules
 
 - No uses Server Actions, usa Route Handlers
 - Para manejo de estado global usa Zustand
 - Para formularios, si es que hubiere, usar react-hook-form y zod
 - Cuando termines, debemos actualizar el `docs/PLAN.md`, pero seamos claros en lo que editamos.
+- Seguir Gitflow: features desde `develop`, PRs con build passing, squash-merge
+- No commitear `.env.local` ni secretos. Usar `.env.local.example` como template
+- Branches de feature deben ser cortos y enfocados (1 feature = 1 branch)
