@@ -469,3 +469,50 @@ Expandir el tracking de futbol chileno (Copa Chile, Segunda Division), reemplaza
 ### Mock fallback:
 - Todas las rutas API mantienen fallback a `getMatchesBySport()` si las APIs reales no retornan datos
 - Mock data en `sports-fixtures.ts` sigue disponible como respaldo
+
+---
+
+## Fase 20: Busqueda de Noticias + Pagina de Tag
+
+**Estado**: Completada
+**Fecha**: 2026-02-07
+
+### Objetivo:
+Hacer funcional el SearchOverlay (antes placeholder) y crear pagina `/tag/[tag]` con tags clickeables en articulos.
+
+### Cambios realizados:
+
+#### Capa de datos:
+1. **articles.ts**: Nuevos helpers mock `searchArticles()`, `getArticlesByTag()`, `getAllTags()`
+2. **queries.ts**: GROQ queries `searchArticlesQuery` (match en title/excerpt/tags) y `articlesByTagQuery`
+3. **dal.ts**: Funciones DAL `searchArticles()` y `getArticlesByTag()` con Sanity/mock fallback
+
+#### API de busqueda:
+4. **`/api/search`**: Route handler con validacion de query minimo 2 chars, retorna JSON ligero (id, slug, title, excerpt, category, imageUrl, publishedAt, tags)
+
+#### SearchOverlay funcional:
+5. **SearchOverlay.tsx**: Reescrito de placeholder a componente funcional
+   - Debounce 300ms con useEffect + setTimeout
+   - Fetch a `/api/search?q=...` cuando query >= 2 chars
+   - Estados: vacio (icono + etiquetas populares), loading (skeletons), sin resultados, con resultados
+   - Click en resultado cierra dialog y navega al articulo
+   - Etiquetas populares como sugerencias (links a `/tag/[tag]`)
+   - Color de categoria en barra lateral y badge por resultado
+
+#### Pagina de tag:
+6. **`/tag/[tag]/page.tsx`**: Server component con `generateMetadata()`, BreadcrumbNav, header con icono Tag, grid de NewsCardStandard, Sidebar con Mas Leidas
+7. Estado vacio amigable cuando no hay articulos con la etiqueta
+
+#### Tags clickeables:
+8. **articulo/[slug]/page.tsx**: Tags cambiados de `<span>` a `<Link href="/tag/{tag}">` con mismos estilos
+
+### Archivos creados (2):
+- `src/app/api/search/route.ts`
+- `src/app/tag/[tag]/page.tsx`
+
+### Archivos modificados (5):
+- `src/data/articles.ts` — helpers de busqueda y tags
+- `src/sanity/queries.ts` — GROQ queries
+- `src/lib/dal.ts` — funciones DAL
+- `src/components/layout/SearchOverlay.tsx` — componente funcional
+- `src/app/articulo/[slug]/page.tsx` — tags clickeables

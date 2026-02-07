@@ -8,6 +8,7 @@ import { ImageWithFallback } from "@/components/shared/ImageWithFallback";
 import { SocialShareBar } from "@/components/shared/SocialShareBar";
 import { RelatedArticles } from "@/components/news/RelatedArticles";
 import { formatDate, formatReadingTime } from "@/lib/format";
+import Link from "next/link";
 import { Clock, User } from "lucide-react";
 
 interface ArticlePageProps {
@@ -119,12 +120,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             {article.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-8 pt-4 border-t border-spng-border">
                 {article.tags.map((tag) => (
-                  <span
+                  <Link
                     key={tag}
+                    href={`/tag/${tag}`}
                     className="text-xs bg-spng-bg-secondary px-3 py-1.5 rounded-full text-spng-muted hover:bg-spng-accent/10 hover:text-spng-primary transition-colors"
                   >
                     #{tag}
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}
