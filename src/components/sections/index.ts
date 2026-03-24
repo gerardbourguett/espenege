@@ -5,3 +5,4 @@ export { CategorySection } from "./CategorySection";
 export { DeportivaSection } from "./DeportivaSection";
 export { DeportivaSectionWrapper } from "./DeportivaSectionWrapper";
 export { CategoryPageTemplate } from "./CategoryPageTemplate";
+export { WorldNewsSection } from "./WorldNewsSection";

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CategoryPageTemplate } from "@/components/sections/CategoryPageTemplate";
+import { WorldNewsSection } from "@/components/sections/WorldNewsSection";
 
 export const metadata: Metadata = {
   title: "Nacional",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function NacionalPage() {
-  return <CategoryPageTemplate category="nacional" />;
+  return (
+    <CategoryPageTemplate
+      category="nacional"
+      extraTop={<WorldNewsSection section="nacional" />}
+    />
+  );
 }
