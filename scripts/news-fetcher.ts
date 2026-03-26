@@ -94,9 +94,10 @@ async function getOrCreateAuthor(): Promise<string> {
     image: null
   };
 
-  const id = await sanity.create(doc);
+  const result = await sanity.create(doc);
+  const id = (result as any)._id || result;
   console.log(`[author] Created: ${DEFAULT_AUTHOR.name} (${id})`);
-  return id;
+  return id as string;
 }
 
 // Get or create category document
@@ -125,9 +126,10 @@ async function getOrCreateCategory(category: Category): Promise<string> {
     color: category === "deportiva" ? "#00ff00" : category === "nacional" ? "#0000ff" : "#ff0000"
   };
 
-  const id = await sanity.create(doc);
+  const result = await sanity.create(doc);
+  const id = (result as any)._id || result;
   console.log(`[category] Created: ${category} (${id})`);
-  return id;
+  return id as string;
 }
 
 // Check if article already exists (deduplication)
@@ -182,9 +184,10 @@ async function createArticle(
     views: 0
   };
 
-  const id = await sanity.create(doc);
+  const result = await sanity.create(doc);
+  const id = (result as any)._id || result;
   console.log(`[article] Created: "${article.title.substring(0, 50)}..." → ${id}`);
-  return id;
+  return id as string;
 }
 
 // Fetch from WorldNews API
