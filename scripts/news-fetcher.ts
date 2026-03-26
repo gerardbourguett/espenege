@@ -44,7 +44,7 @@ interface WorldNewsResponse {
   number: number;
   available: number;
   news: WorldNewsArticle[];
-  tutorials?: any[];
+  tutorials?: unknown[];
 }
 
 // Config
@@ -94,10 +94,10 @@ async function getOrCreateAuthor(): Promise<string> {
     image: null
   };
 
-  const result = await sanity.create(doc);
-  const id = (result as any)._id || result;
+  const result = await sanity.create(doc) as { _id: string };
+  const id = result._id;
   console.log(`[author] Created: ${DEFAULT_AUTHOR.name} (${id})`);
-  return id as string;
+  return id;
 }
 
 // Get or create category document
@@ -126,10 +126,10 @@ async function getOrCreateCategory(category: Category): Promise<string> {
     color: category === "deportiva" ? "#00ff00" : category === "nacional" ? "#0000ff" : "#ff0000"
   };
 
-  const result = await sanity.create(doc);
-  const id = (result as any)._id || result;
+  const result = await sanity.create(doc) as { _id: string };
+  const id = result._id;
   console.log(`[category] Created: ${category} (${id})`);
-  return id as string;
+  return id;
 }
 
 // Check if article already exists (deduplication)
@@ -184,10 +184,10 @@ async function createArticle(
     views: 0
   };
 
-  const result = await sanity.create(doc);
-  const id = (result as any)._id || result;
+  const result = await sanity.create(doc) as { _id: string };
+  const id = result._id;
   console.log(`[article] Created: "${article.title.substring(0, 50)}..." → ${id}`);
-  return id as string;
+  return id;
 }
 
 // Fetch from WorldNews API
@@ -301,10 +301,6 @@ async function main() {
     console.log(`Errors: ${errors}`);
     console.log(`Duration: ${duration}s`);
     console.log("=".repeat(60));
-
-    // Log to file
-    const logLine = `[${new Date().toISOString()}] Published: ${processed - skipped - errors}, Skipped: ${skipped}, Errors: ${errors}\n`;
-    // In production, append to logs/news-fetcher.log
 
     process.exit(errors > 0 ? 1 : 0);
 
