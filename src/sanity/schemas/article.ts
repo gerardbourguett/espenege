@@ -113,6 +113,26 @@ export const article = defineType({
       of: [{ type: "string" }],
       options: { layout: "tags" },
     }),
+    // WorldNews integration fields
+    defineField({
+      name: "worldNewsId",
+      title: "WorldNews ID",
+      type: "string",
+      description: "ID de la noticia en WorldNews API (para deduplicación)",
+      validation: (Rule) => Rule.unique(),
+    }),
+    defineField({
+      name: "originalUrl",
+      title: "URL Original",
+      type: "url",
+      description: "Link a la noticia original en la fuente",
+    }),
+    defineField({
+      name: "originalAuthor",
+      title: "Autor Original",
+      type: "string",
+      description: "Crédito al autor/fuente original de la noticia",
+    }),
   ],
   orderings: [
     {
