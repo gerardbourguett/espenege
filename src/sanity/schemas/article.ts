@@ -119,7 +119,6 @@ export const article = defineType({
       title: "WorldNews ID",
       type: "string",
       description: "ID de la noticia en WorldNews API (para deduplicación)",
-      validation: (Rule) => Rule.unique(),
     }),
     defineField({
       name: "originalUrl",

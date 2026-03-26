@@ -4,7 +4,7 @@
  * Fetches podcast episodes from Anchor FM RSS feed
  * and returns structured JSON for the frontend.
  * 
- * Usage: npx ts-node scripts/podcast-fetcher.ts
+ * Usage: npx tsx scripts/podcast-fetcher.ts
  */
 
 import dotenv from "dotenv";
@@ -29,127 +29,52 @@ export interface PodcastFeed {
   episodes: PodcastEpisode[];
 }
 
-// Simple XML parser for RSS
-function parseXml(xml: string): Map<string, string | Map<string, string>> {
-  const result = new Map<string, string | Map<string, string>>();
-  const stack: Map<string, string>[] = [result];
-
-  // Remove XML declaration and comments
-  const cleanXml = xml
-    .replace(/<\?xml[^?]*\?>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, (match) => match.replace(/<!\[CDATA\[|\]\]>/g, ""));
-
-  // Parse tags
-  const tagRegex = /<(\/?)([\w:-]+)([^>]*)>/gi;
-  let lastTag: string | null = null;
-  let lastAttrs = "";
-
-  while ((tagRegex.lastIndex < cleanXml.length)) {
-    const match = tagRegex.exec(cleanXml);
-    if (!match) break;
-
-    const [, isClosing, tagName, attrs] = match;
-
-    if (isClosing === "/") {
-      stack.pop();
-    } else if (attrs.trim().endsWith("/>")) {
-      // Self-closing tag
-      const obj = new Map<string, string>();
-      parseAttributes(attrs, obj);
-      const current = stack[stack.length - 1];
-      if (lastTag) {
-        const existing = current.get(tagName);
-        if (existing instanceof Map) {
-          // Already has array of items
-          const arr = current.get(`_${tagName}`) as Map<string, string>[];
-          arr.push(obj);
-        } else {
-          // Convert to array
-          current.set(`_${tagName}`, [existing as string, obj]);
-          current.set(tagName, "array");
-        }
-      }
-    } else {
-      const obj = new Map<string, string>();
-      parseAttributes(attrs, obj);
-      stack.push(obj);
-
-      // Find content between tags
-      const contentStart = tagRegex.lastIndex;
-      const nextTagMatch = cleanXml.match(/<(\/?)([\w:-]+)/, contentStart);
-      if (nextTagMatch) {
-        const contentEnd = cleanXml.indexOf("<", contentStart);
-        if (contentEnd !== -1) {
-          const content = cleanXml.slice(contentStart, contentEnd).trim();
-          if (content) {
-            obj.set("_text", content);
-          }
-        }
-      }
-
-      const current = stack[stack.length - 1];
-      current.set("_tag", tagName);
-    }
-
-    lastTag = tagName;
-    lastAttrs = attrs;
-  }
-
-  return result;
+// Internal types for RSS parsing
+interface RssItem {
+  title?: string | { "#text": string } | null;
+  description?: string | { "#text": string } | null;
+  pubDate?: string | null;
+  enclosure?: { "@_url"?: string; url?: string; "@_length"?: string | null } | null;
+  guid?: string | { "#text": string } | null;
+  "itunes:summary"?: string | { "#text": string } | null;
+  itunes?: {
+    image?: string | { "@_href": string } | null;
+    duration?: string | null;
+  } | null;
 }
 
-function parseAttributes(attrs: string, obj: Map<string, string>): void {
-  const attrRegex = /([\w:-]+)="([^"]*)"/g;
-  let match;
-  while ((match = attrRegex.exec(attrs)) !== null) {
-    obj.set(`@${match[1]}`, match[2]);
-  }
+interface RssChannel {
+  title?: string | null;
+  description?: string | null;
+  link?: string | null;
+  "itunes:image"?: string | { "@_href": string } | null;
+  item?: RssItem[] | RssItem | null;
 }
 
-// Flatten Map to object
-function flattenMap(map: Map<string, any>, prefix = ""): any {
-  const result: any = {};
-
-  for (const [key, value] of map) {
-    const newKey = prefix ? `${prefix}.${key}` : key;
-
-    if (value instanceof Map) {
-      const flat = flattenMap(value, newKey);
-      Object.assign(result, flat);
-    } else if (key !== "_tag" && !key.startsWith("_")) {
-      result[newKey] = value;
-    } else if (key === "_text") {
-      return value;
-    }
-  }
-
-  return result;
-}
-
-// Extract item fields from RSS item
-function extractEpisode(item: Map<string, string | Map<string, string>>): PodcastEpisode {
-  const get = (key: string): string => {
-    const val = item.get(key);
-    if (val instanceof Map) return val.get("_text") || "";
-    if (typeof val === "string") return val;
-    return "";
+interface RssRoot {
+  rss?: {
+    channel?: RssChannel;
   };
+}
 
-  const enclosure = item.get("enclosure") as Map<string, string>;
-  const audioUrl = enclosure?.get?.("@url") || "";
+// Helper type for text or object with #text
+type TextOrTextObject = string | { "#text": string } | null;
 
-  const itunes = item.get("itunes") as Map<string, string> | undefined;
+// Helper to extract text value
+function extractText(value: TextOrTextObject): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && "#text" in value) return value["#text"];
+  return "";
+}
 
-  return {
-    title: get("title"),
-    description: get("description") || get("itunes:summary") || "",
-    pubDate: get("pubDate"),
-    audioUrl,
-    duration: itunes?.get?.("itunes:duration") || null,
-    imageUrl: itunes?.get?.("itunes:image")?.replace("@href=", "") || null,
-    guid: get("guid")
-  };
+// Helper type for href or object with @_href  
+type HrefOrHrefObject = string | { "@_href": string } | null;
+
+// Helper to extract href value
+function extractHref(value: HrefOrHrefObject): string | null {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && "@_href" in value) return value["@_href"];
+  return null;
 }
 
 // Fetch and parse RSS
@@ -175,48 +100,74 @@ export async function fetchPodcastFeed(): Promise<PodcastFeed | null> {
     }
 
     const xml = await response.text();
-    const parsed = parseXml(xml);
 
-    // Extract channel info
-    const channel = parsed.get("channel") as Map<string, string | Map<string, string>>;
+    // Dynamic import to avoid build issues
+    const { XMLParser } = await import("fast-xml-parser");
+    
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: "@_",
+      textNodeName: "#text",
+      cdataPropName: "__cdata",
+      isArray: (name) => ["item", "enclosure"].includes(name)
+    });
+
+    const parsed = parser.parse(xml) as RssRoot;
+    
+    // Navigate to channel
+    const channel = parsed?.rss?.channel;
     if (!channel) {
       throw new Error("No <channel> element found in RSS");
     }
 
-    const get = (key: string): string => {
-      const val = channel.get(key);
-      if (val instanceof Map) return val.get("_text") || "";
-      if (typeof val === "string") return val;
-      return "";
-    };
+    // Get channel metadata
+    const itunesImage = channel["itunes:image"];
+    const imageUrl = typeof itunesImage === 'object' && itunesImage !== null && "@_href" in itunesImage 
+      ? itunesImage["@_href"] 
+      : typeof itunesImage === 'string' ? itunesImage : null;
 
-    const getItunes = (key: string): string => {
-      const itunes = channel.get("itunes") as Map<string, string> | undefined;
-      return itunes?.get?.(key)?.replace("@href=", "") || "";
+    const feed: PodcastFeed = {
+      title: channel.title || "",
+      description: channel.description || "",
+      link: channel.link || "",
+      imageUrl,
+      episodes: []
     };
 
     // Get episodes
-    const itemsData = channel.get("item");
-    const items: Map<string, string>[] = [];
-
-    if (itemsData instanceof Map) {
-      const arr = channel.get("_item") as Map<string, string>[];
-      if (arr) {
-        items.push(...arr);
-      } else {
-        items.push(itemsData);
+    const items = Array.isArray(channel.item) ? channel.item : channel.item ? [channel.item] : [];
+    
+    feed.episodes = items.map((item: RssItem): PodcastEpisode => {
+      // Handle enclosure
+      let audioUrl = "";
+      let duration: string | null = null;
+      
+      if (item.enclosure) {
+        const enc = item.enclosure as { "@_url"?: string; url?: string; "@_length"?: string | null };
+        audioUrl = enc["@_url"] || enc.url || "";
+        duration = enc["@_length"] || null;
       }
-    }
+      
+      // Handle itunes fields
+      const itunes = (item["itunes"] || {}) as { image?: string | { "@_href": string } | null; duration?: string | null };
+      const imageHref = extractHref(itunes.image || null);
+      
+      // Handle description (may be in description or itunes:summary)
+      const description = extractText(item.description || null) ||
+                          extractText(item["itunes:summary"] || null);
+      
+      return {
+        title: extractText(item.title || null),
+        description,
+        pubDate: item.pubDate || "",
+        audioUrl,
+        duration: duration || itunes.duration || null,
+        imageUrl: imageHref,
+        guid: extractText(item.guid || null) || extractText(item.title || null)
+      };
+    });
 
-    const episodes: PodcastEpisode[] = items.map(extractEpisode);
-
-    return {
-      title: get("title"),
-      description: get("description") || get("itunes:summary") || "",
-      link: get("link"),
-      imageUrl: getItunes("itunes:image") || null,
-      episodes
-    };
+    return feed;
 
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -242,12 +193,16 @@ async function main() {
   console.log(`[description] ${feed.description}`);
   console.log(`[episodes] ${feed.episodes.length} episodes\n`);
 
-  feed.episodes.forEach((ep, i) => {
+  feed.episodes.slice(0, 5).forEach((ep, i) => {
     console.log(`${i + 1}. ${ep.title}`);
     console.log(`   ${ep.pubDate} | ${ep.duration || "N/A"}`);
-    console.log(`   ${ep.audioUrl.substring(0, 60)}...`);
+    console.log(`   ${ep.audioUrl ? ep.audioUrl.substring(0, 60) + "..." : "no audio"}`);
     console.log();
   });
+
+  if (feed.episodes.length > 5) {
+    console.log(`... and ${feed.episodes.length - 5} more episodes`);
+  }
 
   console.log("=".repeat(60));
 }
