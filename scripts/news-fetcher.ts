@@ -174,11 +174,15 @@ async function createArticle(
     ],
     category: { _type: "reference", _ref: categoryId },
     author: { _type: "reference", _ref: authorId },
-    publishedAt: new Date(article.publish_date).toISOString(),
+    publishedAt: (() => {
+      const date = new Date(article.publish_date);
+      return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+    })(),
     readingTime,
     worldNewsId: article.id.toString(),
     originalUrl: article.url,
     originalAuthor: article.author || "Desconocido",
+    externalImageUrl: article.image || null,
     isFeatured: false,
     isBreaking: false,
     views: 0
