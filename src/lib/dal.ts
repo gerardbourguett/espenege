@@ -46,7 +46,7 @@ function toArticle(doc: any): Article {
     },
     publishedAt: doc.publishedAt,
     updatedAt: doc.updatedAt,
-    imageUrl: doc.imageUrl || "/images/placeholder-hero.jpg",
+    imageUrl: doc.imageUrl || doc.externalImageUrl || "/images/placeholder-hero.jpg",
     imageAlt: doc.imageAlt || doc.title || "",
     readingTime: doc.readingTime || 3,
     isFeatured: doc.isFeatured || false,

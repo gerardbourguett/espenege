@@ -132,6 +132,12 @@ export const article = defineType({
       type: "string",
       description: "Crédito al autor/fuente original de la noticia",
     }),
+    defineField({
+      name: "externalImageUrl",
+      title: "URL de imagen externa",
+      type: "url",
+      description: "URL de la imagen de la noticia (desde WorldNews u otra fuente)",
+    }),
   ],
   orderings: [
     {
